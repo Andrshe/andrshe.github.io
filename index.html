@@ -61,6 +61,18 @@
                 setIsPlaying(false);
             };
 
+            // Автозапуск озвучки на Шаге 3 (Итоги)
+            useEffect(() => {
+                if (step === 3) {
+                    // Даем стейту ресурсов обновиться и запускаем голос
+                    setTimeout(() => {
+                        const finalResultText = business >= 75 ? step3SuccessText : step3FailText;
+                        speak(`${finalResultText} ${step3Outro}`);
+                    }, 100);
+                }
+                return () => stopVoice();
+            }, [step]);
+
             useEffect(() => {
                 if (!('speechSynthesis' in window)) {
                     setTtsSupported(false);
@@ -76,11 +88,6 @@
                 }
 
                 window.speechSynthesis.cancel();
-
-                if (isPlaying) {
-                    setIsPlaying(false);
-                    return;
-                }
 
                 try {
                     const utterance = new SpeechSynthesisUtterance(textToSpeak);
@@ -128,6 +135,7 @@
             };
 
             const handleChoice = (timeChange, energyChange, businessChange) => {
+                stopVoice(); // Принимаем решение — глушим фоновые звуки
                 setTime(prev => Math.max(0, Math.min(100, prev + timeChange)));
                 setEnergy(prev => Math.max(0, Math.min(100, prev + energyChange)));
                 setBusiness(prev => Math.max(0, Math.min(100, prev + businessChange)));
@@ -281,7 +289,7 @@
                                 <div class="space-y-4">
                                     <div class="bg-slate-950 px-3 py-1 rounded text-[10px] text-zinc-400 font-mono uppercase inline-block">Шаг 1: Логистика</div>
                                     <p class="text-base text-white font-medium leading-relaxed">
-                                        Нео запустил бренд бытовой химии во Владивостоке. Продукт отличный, но везти его в федеральные сети на запада страны безумно дорого. Московские конкуренты давят ценой. Время поджимает. Что делаешь?
+                                        Нео запустил бренд бытовой химии во Владивостоке. Продукт отличный, но везти его в федеральные сети на запад страны безумно дорого. Московские конкуренты давят ценой. Время поджимает. Что делаешь?
                                     </p>
                                     <div class="space-y-3 pt-2">
                                         <button 
