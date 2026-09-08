@@ -1,956 +1,412 @@
-<title>Красная Таблетка</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
-<style>
-  :root{
-    --bg:#07070a;
-    --surface:#111116;
-    --surface-2:#18181c;
-    --border-strong:#3f3f46;
-    --border: rgba(255,255,255,.10);
-    --border-soft: rgba(255,255,255,.06);
-    --text:#ffffff;
-    --text-dim:#d4d4d8;
-    --text-faint:#a1a1aa;
-    --violet:#8b5cf6;
-    --violet-soft: rgba(139,92,246,.18);
-    --emerald:#10b981;
-    --emerald-soft: rgba(16,185,129,.18);
-    --amber:#f59e0b;
-    --amber-soft: rgba(245,158,11,.18);
-    --amber-200:#fde68a;
-    --danger:#ff3459;
-    --danger-soft: rgba(255,52,89,.18);
-    --pill-red:#ff3459;
-    --pill-red-soft: rgba(255,52,89,.18);
-  }
-
-  *{box-sizing:border-box;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Manrope',system-ui,sans-serif;
-    -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;
-  }
-  h1,h2,h3,.display{font-family:'Unbounded',system-ui,sans-serif; text-wrap:balance;}
-  .mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums;}
-  .kicker{
-    font-family:'JetBrains Mono',monospace;
-    font-size:10.5px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--text-faint);
-  }
-
-  ::selection{ background:var(--violet-soft); color:var(--text); }
-  :focus-visible{ outline:2px solid var(--violet); outline-offset:2px; border-radius:6px; }
-
-  ::-webkit-scrollbar{ width:8px; height:8px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:var(--border-strong); border-radius:8px; }
-
-  .stage{ position:relative; min-height:100vh; isolation:isolate; }
-  .ambient{ position:fixed; inset:0; z-index:-1; overflow:hidden; background:var(--bg); }
-  .blob{ position:absolute; border-radius:999px; filter:blur(90px); opacity:.4; animation:drift 22s ease-in-out infinite; }
-  .blob.b1{ width:420px; height:420px; background:var(--violet); top:-140px; left:-120px; }
-  .blob.b2{ width:380px; height:380px; background:var(--emerald); bottom:-160px; right:-100px; animation-delay:-9s; }
-  .blob.b3{ width:280px; height:280px; background:var(--pill-red); top:40%; left:60%; opacity:.14; animation-delay:-4s; }
-  @keyframes drift{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(30px,-24px) scale(1.08); } }
-
-  /* Solid, high-contrast card — no blur, no heavy transparency */
-  .card{
-    background: var(--surface-2);
-    border:1px solid var(--border-strong);
-    border-radius:22px;
-  }
-
-  .frame{ max-width:460px; margin:0 auto; padding:20px 16px 48px; position:relative; }
-
-  .pill-mark{ filter:drop-shadow(0 0 14px var(--pill-red-soft)); }
-
-  /* Transport controls */
-  .play-btn{
-    width:76px; height:76px; border-radius:999px;
-    display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 30% 25%, #a684fb, var(--violet) 55%, #6d28d9 100%);
-    box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset, 0 14px 34px -10px rgba(139,92,246,.65);
-    color:#fff; cursor:pointer; border:none; transition:transform .15s ease, box-shadow .2s ease, opacity .2s ease, filter .2s ease;
-    flex-shrink:0;
-  }
-  .play-btn:hover{ box-shadow:0 0 0 1px rgba(255,255,255,.2) inset, 0 18px 40px -10px rgba(139,92,246,.8); }
-  .play-btn:active{ transform:scale(.94); }
-  .play-btn[data-playing="true"]{ animation:playGlow 2.4s ease-in-out infinite; }
-  .play-btn:disabled{ opacity:.32; cursor:not-allowed; filter:grayscale(.5); box-shadow:none; animation:none; }
-  @keyframes playGlow{
-    0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.16) inset, 0 14px 34px -10px rgba(139,92,246,.7); }
-    50%{ box-shadow:0 0 0 1px rgba(255,255,255,.22) inset, 0 18px 46px -6px rgba(139,92,246,.95); }
-  }
-
-  .mute-btn{
-    width:44px; height:44px; border-radius:999px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    border:1px solid var(--border-strong); background:var(--surface); color:var(--text-dim);
-    cursor:pointer; transition:border-color .2s ease, color .2s ease, transform .12s ease;
-  }
-  .mute-btn:hover{ border-color:var(--violet); color:var(--text); }
-  .mute-btn:active{ transform:scale(.92); }
-  .mute-btn[data-muted="true"]{ color:var(--amber); border-color:var(--amber); background:var(--amber-soft); }
-
-  .live-dot{ width:7px; height:7px; border-radius:999px; background:var(--emerald); box-shadow:0 0 0 0 rgba(16,185,129,.6); animation:pulseDot 1.6s ease-out infinite; }
-  @keyframes pulseDot{ 0%{ box-shadow:0 0 0 0 rgba(16,185,129,.55);} 70%{ box-shadow:0 0 0 8px rgba(16,185,129,0);} 100%{ box-shadow:0 0 0 0 rgba(16,185,129,0);} }
-
-  /* Waveform */
-  .waveform{ display:flex; align-items:center; gap:3px; height:36px; }
-  .wave-bar{
-    width:3px; border-radius:3px; background:linear-gradient(180deg, var(--violet), var(--emerald));
-    height: calc(var(--h) * 1px);
-    transform-origin:center;
-    animation: wavePulse var(--dur) ease-in-out infinite;
-    animation-play-state: paused;
-    opacity:.3;
-    transition:opacity .3s ease;
-  }
-  .waveform.is-playing .wave-bar{ animation-play-state:running; opacity:1; }
-  .waveform.is-muted .wave-bar{ background:linear-gradient(180deg, var(--text-faint), var(--text-dim)); }
-  @keyframes wavePulse{ 0%,100%{ transform:scaleY(.35); } 50%{ transform:scaleY(1); } }
-
-  /* Duration bar */
-  .track-bar{ position:relative; height:5px; border-radius:999px; background:var(--border-strong); overflow:visible; }
-  .track-fill{ position:absolute; inset:0 auto 0 0; border-radius:999px; background:linear-gradient(90deg, var(--violet), var(--emerald)); transition:width .3s linear; }
-  .track-scrub{ position:absolute; top:50%; width:11px; height:11px; border-radius:999px; background:#fff; box-shadow:0 0 0 3px rgba(139,92,246,.35); transform:translate(-50%,-50%); transition:left .3s linear; }
-
-  /* Resource bars */
-  .res-track{ height:8px; border-radius:999px; background:var(--surface); border:1px solid var(--border-soft); overflow:hidden; }
-  .res-fill{ height:100%; border-radius:999px; transition:width .6s cubic-bezier(.22,.9,.3,1); }
-
-  /* Transcript — solid, high-contrast text always; active line gets a highlight band, never a dim one */
-  .transcript-row{ border-radius:12px; padding:7px 9px; margin:0 -9px; transition:background-color .25s ease; }
-  .transcript-row.active{ background:rgba(139,92,246,.20); }
-  .transcript-line{ color:var(--text); }
-  .bullet{ width:6px; height:6px; border-radius:999px; background:#52525b; margin-top:8px; flex-shrink:0; transition:background .25s ease, box-shadow .25s ease; }
-  .bullet.active{ background:var(--emerald); box-shadow:0 0 10px var(--emerald); }
-
-  .delta-chip{
-    display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:999px;
-    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;
-  }
-
-  /* Choice buttons */
-  .choice-btn{
-    text-align:left; width:100%; border-radius:18px; border:1px solid var(--border-strong);
-    background:var(--surface); padding:16px 16px; cursor:pointer; transition:border-color .2s ease, transform .12s ease, background .2s ease;
-    color:var(--text);
-  }
-  .choice-btn:hover{ border-color:var(--violet); background:#1c1c22; }
-  .choice-btn:active{ transform:scale(.985); }
-
-  .cta-btn{
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    width:100%; padding:16px 20px; border-radius:16px; border:none; cursor:pointer;
-    font-family:'Unbounded',sans-serif; font-size:14px; font-weight:600; letter-spacing:.01em;
-    background:linear-gradient(90deg, var(--emerald), #059669);
-    color:#04120b; transition:transform .12s ease, filter .2s ease;
-  }
-  .cta-btn:hover{ filter:brightness(1.08); }
-  .cta-btn:active{ transform:scale(.98); }
-
-  .ghost-btn{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    width:100%; padding:14px 18px; border-radius:14px; cursor:pointer;
-    border:1px solid var(--border-strong); background:var(--surface); color:var(--text);
-    font-weight:600; font-size:14px; transition:border-color .2s ease, transform .12s ease;
-  }
-  .ghost-btn:hover{ border-color:var(--violet); }
-  .ghost-btn:active{ transform:scale(.98); }
-
-  /* Record scratch */
-  .scratch-overlay{
-    position:fixed; inset:0; z-index:60; pointer-events:none;
-    display:flex; align-items:center; justify-content:center;
-    opacity:0; transition:opacity .12s ease;
-  }
-  .scratch-overlay.active{ opacity:1; animation:scratchFlash .5s steps(2,end); }
-  @keyframes scratchFlash{
-    0%{ background:rgba(255,52,89,.0); }
-    15%{ background:rgba(255,52,89,.25); }
-    30%{ background:rgba(0,0,0,.6); }
-    45%{ background:rgba(255,52,89,.18); }
-    60%{ background:rgba(0,0,0,.5); }
-    100%{ background:rgba(0,0,0,0); }
-  }
-  .scratch-shake{ animation:none; }
-  .scratch-shake.active{ animation:shakeIt .5s cubic-bezier(.36,.07,.19,.97) both; }
-  @keyframes shakeIt{
-    10%,90%{ transform:translate3d(-1px,0,0) rotate(-.3deg); }
-    20%,80%{ transform:translate3d(2px,0,0) rotate(.3deg); }
-    30%,50%,70%{ transform:translate3d(-4px,0,0) rotate(-.5deg); }
-    40%,60%{ transform:translate3d(4px,0,0) rotate(.5deg); }
-  }
-  .scratch-disc{ animation:discSpin .5s linear both; color:var(--pill-red); }
-  @keyframes discSpin{ 0%{ transform:rotate(0) scale(.6); opacity:0;} 30%{opacity:1;} 100%{ transform:rotate(320deg) scale(1); opacity:0;} }
-
-  /* Modal */
-  .modal-backdrop{ position:fixed; inset:0; background:rgba(4,4,6,.8); display:flex; align-items:center; justify-content:center; z-index:70; padding:20px; animation:fadeIn .2s ease; }
-  .modal-card{ animation:popIn .28s cubic-bezier(.2,.9,.25,1.15); }
-  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
-  @keyframes popIn{ from{ opacity:0; transform:translateY(14px) scale(.97);} to{ opacity:1; transform:translateY(0) scale(1);} }
-
-  textarea.case-input{
-    width:100%; resize:vertical; min-height:96px; border-radius:14px; border:1px solid var(--border-strong);
-    background:var(--surface); color:var(--text); padding:12px 14px; font-family:'Manrope',sans-serif; font-size:14px; line-height:1.5;
-  }
-  textarea.case-input::placeholder{ color:var(--text-faint); }
-  textarea.case-input:focus{ border-color:var(--violet); }
-
-  .log-row{ display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--border-soft); }
-  .log-row:last-child{ border-bottom:none; }
-
-  @media (prefers-reduced-motion: reduce){
-    .blob, .play-btn[data-playing="true"], .live-dot, .wave-bar, .scratch-shake.active, .scratch-disc, .modal-card{ animation:none !important; }
-  }
-</style>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<div id="root"></div>
-
-<script type="text/javascript">
-const h = React.createElement;
-const { useState, useEffect, useRef, useMemo, useCallback } = React;
-
-/* ---------------------------------------------------------- */
-/* Icons (hand-authored, lucide-style, no external dependency) */
-/* ---------------------------------------------------------- */
-function Icon(props){
-  const { children, size = 20, className = '', strokeWidth = 2 } = props;
-  return h('svg', {
-    viewBox:'0 0 24 24', width:size, height:size, fill:'none',
-    stroke:'currentColor', strokeWidth:strokeWidth,
-    strokeLinecap:'round', strokeLinejoin:'round', className
-  }, children);
-}
-const IconPlay = (p) => h(Icon, p, h('polygon', { points:'7 4 20 12 7 20 7 4', fill:'currentColor', stroke:'none', key:'a' }));
-const IconPause = (p) => h(Icon, p, [
-  h('rect', { x:6, y:4, width:4, height:16, rx:1, fill:'currentColor', stroke:'none', key:'a' }),
-  h('rect', { x:14, y:4, width:4, height:16, rx:1, fill:'currentColor', stroke:'none', key:'b' }),
-]);
-const IconClock = (p) => h(Icon, p, [
-  h('circle', { cx:12, cy:12, r:9, key:'a' }),
-  h('polyline', { points:'12 7 12 12 15.5 14', key:'b' }),
-]);
-const IconZap = (p) => h(Icon, p, h('polygon', { points:'13 2 4 14 11 14 10 22 20 10 13 10 13 2', key:'a' }));
-const IconBriefcase = (p) => h(Icon, p, [
-  h('rect', { x:2.5, y:7, width:19, height:13, rx:2, key:'a' }),
-  h('path', { d:'M16 20V5.5a1.5 1.5 0 0 0-1.5-1.5h-5A1.5 1.5 0 0 0 8 5.5V20', key:'b' }),
-]);
-const IconChevronRight = (p) => h(Icon, p, h('polyline', { points:'9 18 15 12 9 6', key:'a' }));
-const IconCheck = (p) => h(Icon, p, h('polyline', { points:'20 6 9 17 4 12', key:'a' }));
-const IconDisc = (p) => h(Icon, p, [
-  h('circle', { cx:12, cy:12, r:9, key:'a' }),
-  h('circle', { cx:12, cy:12, r:2.4, fill:'currentColor', key:'b' }),
-]);
-const IconSend = (p) => h(Icon, p, h('polygon', { points:'22 2 15 22 11 13 2 9 22 2', key:'a' }));
-const IconX = (p) => h(Icon, p, [
-  h('line', { x1:18, y1:6, x2:6, y2:18, key:'a' }),
-  h('line', { x1:6, y1:6, x2:18, y2:18, key:'b' }),
-]);
-const IconActivity = (p) => h(Icon, p, h('polyline', { points:'22 12 18 12 15 21 9 3 6 12 2 12', key:'a' }));
-const IconVolumeOff = (p) => h(Icon, p, [
-  h('polygon', { points:'11 5 6 9 2 9 2 15 6 15 11 19 11 5', fill:'currentColor', stroke:'none', key:'a' }),
-  h('line', { x1:23, y1:9, x2:17, y2:15, key:'b' }),
-  h('line', { x1:17, y1:9, x2:23, y2:15, key:'c' }),
-]);
-const IconVolume2 = (p) => h(Icon, p, [
-  h('polygon', { points:'11 5 6 9 2 9 2 15 6 15 11 19 11 5', fill:'currentColor', stroke:'none', key:'a' }),
-  h('path', { d:'M15.5 8.5a5 5 0 0 1 0 7', key:'b' }),
-  h('path', { d:'M18.9 5.1a10 10 0 0 1 0 13.8', key:'c' }),
-]);
-const IconTarget = (p) => h(Icon, p, [
-  h('circle', { cx:12, cy:12, r:9, key:'a' }),
-  h('circle', { cx:12, cy:12, r:5, key:'b' }),
-  h('circle', { cx:12, cy:12, r:1.4, fill:'currentColor', stroke:'none', key:'c' }),
-]);
-const IconRotate = (p) => h(Icon, p, [
-  h('polyline', { points:'1 4 1 10 7 10', key:'a' }),
-  h('path', { d:'M3.51 15a9 9 0 1 0 2.13-9.36L1 10', key:'b' }),
-]);
-
-/* ---------------------------------------------------------- */
-/* Script data                                                 */
-/* ---------------------------------------------------------- */
-const EPISODE_LABEL = 'Эпизод 13: Минпромторг и суровая реальность';
-const TOTAL_SECONDS = 300; // 05:00 — a stand-in for a full episode length
-
-// Only these stages carry voiceover. Steps 1 & 2 (and their outcomes) are
-// strictly silent, text-driven gameplay per the interaction design.
-const VOICED_STAGES = new Set(['intro', 'transition', 'final']);
-
-const BEATS = {
-  intro: {
-    kicker: 'ОФИЦИАЛЬНЫЙ РЕЛИЗ',
-    sentences: [
-      'Новая экспертная встреча — с Романом Чекушовым, статс-секретарём, заместителем Министра промышленности и торговли РФ, членом клуба «Эльбрус»!',
-      'Накануне участники нашего сообщества — активные управленцы, предприниматели — встретились на площадке Минпромторга РФ.',
-      'Каждый смог задать волнующие вопросы Роману Чекушову и получить его экспертные ответы.',
-      'Встреча прошла в рамках проекта «Помощь Клуба».',
-      'В центре обсуждения были актуальные тенденции развития маркетплейсов и торговых сетей.',
-      'Как отметил Роман Чекушов, российские бренды становятся все популярнее, а объемы производства отечественной продукции растут.',
-      'Председатель клуба «Эльбрус» Татьяна Дьяконова напомнила о важности технологического суверенитета.',
-    ],
-  },
-  transition: {
-    kicker: 'НА САМОМ ДЕЛЕ',
-    sentences: [
-      'Красивый пресс-релиз, правда?',
-      'Атмосфера деловая...',
-      'Но а как можно в реальности решить свой вопрос члену Сообщества, когда косты на логистику душат реальный бизнес?',
-      'Давай проверим это на кейсе нашего героя — предпринимателя Нео.',
-      'Нажмите «Перейти к кейсу», чтобы начать тест.',
-    ],
-    next: 'step1',
-  },
-  step1: {
-    kicker: 'ШАГ 1 · ЛОГИСТИЧЕСКИЙ БАРЬЕР',
-    sentences: [
-      'Нео запустил бренд бытовой химии во Владивостоке.',
-      'Продукт отличный, но везти его в федеральные сети на запад страны безумно дорого.',
-      'Московские конкуренты давят ценой.',
-      'Время поджимает.',
-      'Что делаешь?',
-    ],
-    choices: [
-      {
-        id: 'a',
-        label: 'Подать официальный пакет документов на получение государственной субсидии на логистику.',
-        next: 'step1-outcome-a',
-      },
-      {
-        id: 'b',
-        label: 'Разместить запрос о поиске попутных грузов или совместной аренде контейнеров в чате выпускников конкурса.',
-        next: 'step1-outcome-b',
-      },
-    ],
-  },
-  'step1-outcome-a': {
-    kicker: 'РЕЗУЛЬТАТ · ВАРИАНТ А',
-    sentences: [
-      'В министерстве вам показали стопку документов толщиной в кирпич: «Заполняйте сами, у нас некому».',
-      'Вы тратите недели на бумажную волокиту, пытаясь совместить это с операционным управлением бизнесом.',
-    ],
-    delta: { time: -40, energy: -50, business: 5 },
-    next: 'step2',
-  },
-  'step1-outcome-b': {
-    kicker: 'РЕЗУЛЬТАТ · ВАРИАНТ Б',
-    sentences: [
-      'В чате оперативно отозвался коллега-выпускник: «Мы возим контейнеры обратно на запад полупустыми, давай объединять логистику».',
-      'За один неформальный звонок вы срезаете косты.',
-    ],
-    delta: { time: -5, energy: -10, business: 45 },
-    next: 'step2',
-  },
-  step2: {
-    kicker: 'ШАГ 2 · ВЫДЕЛЕНИЕ ЗЕМЛИ ПОД ХАБ',
-    sentences: [
-      'Для масштабирования проекта вам необходим собственный логистический хаб.',
-      'Губернатор на личной встрече концептуально поддержал проект, но реальное выделение участка земли затягивается аппаратом на неопределенный срок.',
-      'Ваши действия?',
-    ],
-    choices: [
-      {
-        id: 'a',
-        label: 'Направить официальный запрос в аппарат правительства региона и ожидать рассмотрения по регламенту.',
-        next: 'step2-outcome-a',
-      },
-      {
-        id: 'b',
-        label: 'Найти в базе выпускников конкурса сотрудника администрации этого региона и обратиться за рабочей консультацией.',
-        next: 'step2-outcome-b',
-      },
-    ],
-  },
-  'step2-outcome-a': {
-    kicker: 'РЕЗУЛЬТАТ · ВАРИАНТ А',
-    sentences: [
-      'Проект увязает в бесконечных согласованиях между департаментами.',
-      'Из-за отсутствия живой коммуникации документы возвращают на доработку по формальным причинам.',
-      'Время упущено.',
-    ],
-    delta: { time: -40, energy: -30, business: 0 },
-    next: 'final',
-  },
-  'step2-outcome-b': {
-    kicker: 'РЕЗУЛЬТАТ · ВАРИАНТ Б',
-    sentences: [
-      'Коллега по сообществу за 15 минут объясняет вам «скрытые» барьеры прохождения документов в ведомстве.',
-      'Он помогает переформатировать заявку под приоритетный региональный трек.',
-    ],
-    delta: { time: -10, energy: 15, business: 35 },
-    next: 'final',
-  },
-  final: {
-    kicker: 'ФИНАЛ И ВЫВОДЫ',
-    sentences: [
-      'Кейс Нео доказал: сообщество эффективных лидеров — это не пафосные отчеты с трибун.',
-      'Это рабочий инструмент горизонтального взаимодействия, который экономит ваше личное время за счет прямого доверия.',
-    ],
-  },
-};
-
-const WIN_TEXT = 'Победа! Вы пробили хрустальный потолок, сэкономили время и масштабировали бизнес через силу горизонтального доверия.';
-const LOSE_TEXT = 'Поражение. Вы увязли в бюрократическом болоте в одиночку. Ваше время истекло.';
-const CTA_LABEL = 'Предложить свой сложный кейс для интерактивного разбора';
-const CTA_SUCCESS_TEXT = 'Спасибо! Ваш кейс принят редакцией Журнала Действия. Мы свяжемся с вами, чтобы превратить вашу проблему в следующее решение.';
-const CHOICE_LETTERS = { a: 'А', b: 'Б' };
-
-const clamp = (v) => Math.max(0, Math.min(100, v));
-function formatTime(sec){
-  const s = Math.max(0, Math.round(sec));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return m + ':' + String(r).padStart(2, '0');
-}
-
-/* ---------------------------------------------------------- */
-/* Small presentational components                             */
-/* ---------------------------------------------------------- */
-function ResourceBar({ icon, label, value, color, colorSoft }){
-  return h('div', { className:'flex flex-col gap-1.5' }, [
-    h('div', { className:'flex items-center justify-between', key:'top' }, [
-      h('div', { className:'flex items-center gap-2', key:'l' }, [
-        h('span', { style:{ color }, key:'i' }, icon),
-        h('span', { className:'text-[12.5px] text-[var(--text-dim)] font-medium', key:'t' }, label),
-      ]),
-      h('span', { className:'mono text-[12.5px] font-semibold', style:{ color }, key:'v' }, value + '%'),
-    ]),
-    h('div', { className:'res-track', key:'track' },
-      h('div', { className:'res-fill', style:{ width: value + '%', background: color, boxShadow:'0 0 10px ' + colorSoft } })
-    ),
-  ]);
-}
-
-function Waveform({ playing, muted }){
-  const bars = useMemo(() => {
-    const arr = [];
-    for(let i=0;i<28;i++){
-      const h1 = 8 + Math.round(Math.abs(Math.sin(i*1.7))*22);
-      const dur = (0.7 + (i % 5) * 0.13).toFixed(2);
-      arr.push({ h: h1, dur, delay: (i*0.045).toFixed(2) });
-    }
-    return arr;
-  }, []);
-  return h('div', { className:'waveform' + (playing ? ' is-playing' : '') + (muted ? ' is-muted' : '') },
-    bars.map((b, i) => h('div', {
-      key:i, className:'wave-bar',
-      style:{ '--h': b.h, '--dur': b.dur + 's', animationDelay: b.delay + 's' },
-    }))
-  );
-}
-
-function Transcript({ kicker, sentences, activeIdx, silent, emphasizeIndex, emphasizeStyle, deltaChips }){
-  return h('div', { className:'card p-4 flex flex-col gap-3' }, [
-    h('div', { className:'flex items-center justify-between', key:'head' }, [
-      h('span', { className:'kicker', key:'k' }, kicker + (silent ? ' · БЕЗ ОЗВУЧКИ' : '')),
-      h('span', { className:'kicker flex items-center gap-1.5', key:'r' }, [
-        h(IconActivity, { size:12, key:'ic' }),
-        silent ? 'ТЕКСТ' : 'ТРАНСКРИПТ',
-      ]),
-    ]),
-    h('div', { className:'flex flex-col gap-1', key:'lines' },
-      sentences.map((s, i) => {
-        if(emphasizeIndex === i && emphasizeStyle){
-          return h('div', {
-            key:i, className:'rounded-2xl px-4 py-3 mt-1',
-            style:{ background: emphasizeStyle.bg, border:'1px solid ' + emphasizeStyle.border },
-          }, h('p', { className:'text-[15.5px] font-bold leading-snug', style:{ color: emphasizeStyle.color } }, s));
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Красная Таблетка. Честный подкаст</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and Babel CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        button, a, [role="button"], .interactive-element {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        return h('div', { key:i, className:'transcript-row flex gap-2.5' + (i===activeIdx ? ' active' : '') }, [
-          h('span', { className:'bullet' + (i===activeIdx ? ' active' : ''), key:'b' }),
-          h('p', { className:'transcript-line text-[14.5px] leading-relaxed', key:'p' }, s),
-        ]);
-      })
-    ),
-    deltaChips && h('div', { className:'flex gap-2 flex-wrap pt-1', key:'chips' },
-      deltaChips.map((c, i) => h('span', {
-        key:i, className:'delta-chip', style:{ background:c.soft, color:c.color },
-      }, [
-        h(c.icon, { size:12, key:'ic' }),
-        c.label + ' ' + (c.value > 0 ? '+' : '') + c.value + '%',
-      ]))
-    ),
-  ]);
-}
+        @keyframes soundWave {
+            0%, 100% { height: 4px; }
+            50% { height: 28px; }
+        }
+        .wave-bar {
+            animation: soundWave 1.2s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.6s; }
+    </style>
+</head>
+<body class="bg-[#0B0F19] text-white overflow-x-hidden">
+    <div id="root"></div>
 
-function ChoiceButton({ letter, text, onClick }){
-  return h('button', { className:'choice-btn', onClick }, [
-    h('div', { className:'flex items-center gap-2 mb-2', key:'top' }, [
-      h('span', {
-        className:'mono text-[11px] font-bold px-2 py-0.5 rounded-md',
-        style:{ background:'var(--violet-soft)', color:'var(--violet)' }, key:'letter'
-      }, 'ВАРИАНТ ' + letter),
-    ]),
-    h('p', { className:'text-[14px] leading-snug text-[var(--text)]', key:'txt' }, text),
-    h('div', { className:'flex justify-end mt-2', key:'chev' }, h(IconChevronRight, { size:16, className:'text-[var(--text-faint)]' })),
-  ]);
-}
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-function CaseModal({ onClose, onSubmit, submitted }){
-  const [text, setText] = useState('');
-  return h('div', { className:'modal-backdrop', onClick: onClose }, [
-    h('div', {
-      key:'card', className:'modal-card card w-full max-w-[380px] p-6 relative',
-      onClick: (e) => e.stopPropagation(),
-    }, submitted
-      ? [
-          h('div', { key:'ok', className:'flex flex-col items-center text-center gap-4 py-4' }, [
-            h('div', {
-              key:'chk', className:'w-14 h-14 rounded-full flex items-center justify-center',
-              style:{ background:'var(--emerald-soft)', color:'var(--emerald)', boxShadow:'0 0 26px var(--emerald-soft)' }
-            }, h(IconCheck, { size:26 })),
-            h('h3', { key:'t', className:'display text-[18px]' }, 'Кейс принят'),
-            h('p', { key:'p', className:'text-[13.5px] text-[var(--text-dim)] leading-relaxed' }, CTA_SUCCESS_TEXT),
-            h('button', { key:'close', className:'ghost-btn mt-2', onClick: onClose }, 'Закрыть'),
-          ]),
-        ]
-      : [
-          h('button', {
-            key:'x', onClick: onClose,
-            className:'absolute top-4 right-4 text-[var(--text-faint)] hover:text-[var(--text)]'
-          }, h(IconX, { size:18 })),
-          h('h3', { key:'t', className:'display text-[17px] pr-6 mb-2' }, 'Свой сложный кейс'),
-          h('p', { key:'p', className:'text-[13px] text-[var(--text-dim)] mb-4 leading-relaxed' },
-            'Опишите ситуацию, в которой формальный путь буксует. Разберём в следующем эпизоде.'),
-          h('textarea', {
-            key:'ta', className:'case-input', placeholder:'Например: получение земли под резидента ТОР…',
-            value:text, onChange:(e)=>setText(e.target.value),
-          }),
-          h('button', {
-            key:'submit', className:'cta-btn mt-4',
-            style: text.trim().length < 3 ? { opacity:.45, cursor:'not-allowed' } : {},
-            disabled: text.trim().length < 3,
-            onClick: () => onSubmit(text),
-          }, [h(IconSend, { size:16, key:'i' }), 'Отправить кейс']),
-        ]
-    ),
-  ]);
-}
+        function App() {
+            const [step, setStep] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [time, setTime] = useState(100);
+            const [business, setBusiness] = useState(15);
+            const [energy, setEnergy] = useState(80);
+            const [showModal, setShowModal] = useState(false);
+            const [ttsSupported, setTtsSupported] = useState(true);
+            const [showTtsAlert, setShowTtsAlert] = useState(false);
+            const [targetClicks, setTargetClicks] = useState(0);
+            const utteranceRef = useRef(null);
 
-/* ---------------------------------------------------------- */
-/* Main App                                                    */
-/* ---------------------------------------------------------- */
-function App(){
-  const [stage, setStage] = useState('intro');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(-1);
-  const [elapsed, setElapsed] = useState(0);
-  const [scratchActive, setScratchActive] = useState(false);
-  const [stats, setStats] = useState({ time: 100, business: 15, energy: 80 });
-  const [verdict, setVerdict] = useState(null);
-  const [muted, setMuted] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [caseSubmitted, setCaseSubmitted] = useState(false);
-  const [targetActionsCount, setTargetActionsCount] = useState(0);
-  const [log, setLog] = useState([]);
-  const [supportsSpeech] = useState(() => typeof window !== 'undefined' && 'speechSynthesis' in window);
+            const introText = "Новая экспертная встреча — с Романом Чекушовым, статс-секретарём, заместителем Министра промышленности и торговли РФ, членом клуба «Эльбрус»! Накануне участники нашего сообщества — активные управленцы, предприниматели — встретились на площадке Минпромторга РФ. Каждый смог задать волнующие вопросы Роману Чекушову и получить его экспертные ответы. Встреча прошла в рамках проекта «Помощь Клуба». В центре обсуждения были актуальные тенденции развития маркетплейсов и торговых сетей. Как отметил Роман Чекушов, российские бренды становятся все популярнее, а объемы производства отечественной продукции растут. Председатель клуба «Эльбрус» Татьяна Дьяконова напомнила о важности технологического суверенитета.";
+            const transitionText = "Красивый пресс-релиз, правда? Атмосфера деловая... Но а как можно в реальности решить свой вопрос члену Сообщества, когда косты на логистику душат реальный бизнес? Давай проверим это на кейсе нашего героя — предпринимателя Нео. Нажмите 'Перейти к кейсу', чтобы начать квест.";
+            
+            const step3SuccessText = "Победа! Вы пробили хрустальный потолок, сэкономили время и масштабировали бизнес через силу горизонтального доверия.";
+            const step3FailText = "Поражение. Вы увязли в бюрократическом болоте в одиночку. Ваше время истекло.";
+            const step3Outro = "Кейс Нео доказал: сообщество эффективных лидеров — это не пафосные отчеты с трибун. Это рабочий инструмент горизонтального взаимодействия, который экономит ваше личное время за счет прямого доверия.";
 
-  const voiceRef = useRef(null);
-  const mutedRef = useRef(false);
-  const sentenceIdxRef = useRef(0);
-  const prevStageRef = useRef(null);
-  const appliedDeltaRef = useRef(new Set());
-  const logIdRef = useRef(0);
+            const stopVoice = () => {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+                setIsPlaying(false);
+            };
 
-  useEffect(() => { mutedRef.current = muted; }, [muted]);
+            useEffect(() => {
+                if (!('speechSynthesis' in window)) {
+                    setTtsSupported(false);
+                }
+                return () => stopVoice();
+            }, []);
 
-  const logAction = useCallback((label) => {
-    logIdRef.current += 1;
-    const entry = {
-      id: logIdRef.current,
-      time: new Date().toLocaleTimeString('ru-RU', { hour12:false }),
-      label,
-    };
-    setLog((prev) => [entry, ...prev].slice(0, 40));
-  }, []);
+            const speak = (textToSpeak) => {
+                if (!window.speechSynthesis) {
+                    setTtsSupported(false);
+                    setShowTtsAlert(true);
+                    return;
+                }
 
-  // Load a Russian voice once available
-  useEffect(() => {
-    if(!supportsSpeech) return;
-    function loadVoices(){
-      const voices = window.speechSynthesis.getVoices();
-      if(voices.length){
-        const preferred = voices.find(v => /^ru/i.test(v.lang) && /google|yandex|milena|irina|elena/i.test(v.name))
-          || voices.find(v => /^ru/i.test(v.lang))
-          || null;
-        voiceRef.current = preferred;
-      }
-    }
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    return () => {
-      try{ window.speechSynthesis.onvoiceschanged = null; }catch(e){}
-    };
-  }, [supportsSpeech]);
+                window.speechSynthesis.cancel();
 
-  useEffect(() => {
-    logAction('Открыт прототип «Красная Таблетка»');
-    return () => { if(supportsSpeech){ try{ window.speechSynthesis.cancel(); }catch(e){} } };
-    // eslint-disable-next-line
-  }, []);
+                if (isPlaying) {
+                    setIsPlaying(false);
+                    return;
+                }
 
-  const cancelSpeech = useCallback(() => {
-    if(supportsSpeech){ try{ window.speechSynthesis.cancel(); }catch(e){} }
-    setIsSpeaking(false);
-  }, [supportsSpeech]);
+                try {
+                    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                    utterance.lang = 'ru-RU';
 
-  const speakSentences = useCallback((sentences, startIndex, onComplete) => {
-    if(!supportsSpeech){ onComplete && onComplete(); return; }
-    window.speechSynthesis.cancel();
-    let i = startIndex;
-    setIsSpeaking(true);
-    function queueNext(){
-      if(i >= sentences.length){
-        setIsSpeaking(false);
-        setActiveIdx(-1);
-        onComplete && onComplete();
-        return;
-      }
-      const utter = new SpeechSynthesisUtterance(sentences[i]);
-      utter.lang = 'ru-RU';
-      if(voiceRef.current) utter.voice = voiceRef.current;
-      utter.rate = 0.98;
-      utter.pitch = 1.0;
-      utter.volume = mutedRef.current ? 0 : 1;
-      const idx = i;
-      utter.onstart = () => { setActiveIdx(idx); sentenceIdxRef.current = idx; };
-      utter.onend = () => { i += 1; queueNext(); };
-      utter.onerror = () => { i += 1; queueNext(); };
-      window.speechSynthesis.speak(utter);
-    }
-    queueNext();
-  }, [supportsSpeech]);
+                    const voices = window.speechSynthesis.getVoices();
+                    const ruVoice = voices.find(v => v.lang.includes('ru') || v.lang.includes('RU'));
+                    if (ruVoice) {
+                        utterance.voice = ruVoice;
+                    }
 
-  // Apply stat deltas exactly once when an outcome stage is entered
-  useEffect(() => {
-    const beat = BEATS[stage];
-    if(beat && beat.delta && !appliedDeltaRef.current.has(stage)){
-      appliedDeltaRef.current.add(stage);
-      setStats((prev) => ({
-        time: clamp(prev.time + beat.delta.time),
-        business: clamp(prev.business + beat.delta.business),
-        energy: clamp(prev.energy + beat.delta.energy),
-      }));
-    }
-  }, [stage]);
+                    utterance.onstart = () => setIsPlaying(true);
+                    utterance.onend = () => setIsPlaying(false);
+                    utterance.onerror = (e) => {
+                        console.error("Speech error", e);
+                        setIsPlaying(false);
+                        setShowTtsAlert(true);
+                    };
 
-  // Compute verdict once when reaching the final stage
-  useEffect(() => {
-    if(stage === 'final' && verdict === null){
-      setStats((prev) => {
-        setVerdict(prev.business >= 75 ? WIN_TEXT : LOSE_TEXT);
-        return prev;
-      });
-    }
-    // eslint-disable-next-line
-  }, [stage]);
+                    utteranceRef.current = utterance;
+                    window.speechSynthesis.speak(utterance);
+                } catch (err) {
+                    console.error("TTS Init Error:", err);
+                    setIsPlaying(false);
+                    setShowTtsAlert(true);
+                }
+            };
 
-  const currentBeat = BEATS[stage];
-  const voiceEnabled = VOICED_STAGES.has(stage);
-  const isFinal = stage === 'final';
-  const currentSentences = useMemo(() => {
-    if(isFinal){
-      return verdict ? currentBeat.sentences.concat([verdict]) : currentBeat.sentences;
-    }
-    return currentBeat.sentences;
-  }, [stage, verdict, currentBeat, isFinal]);
+            const handlePlayPause = () => {
+                if (isPlaying) {
+                    stopVoice();
+                } else {
+                    if (step === 0) {
+                        speak(`${introText} ${transitionText}`);
+                    } else if (step === 3) {
+                        const finalResultText = business >= 75 ? step3SuccessText : step3FailText;
+                        speak(`${finalResultText} ${step3Outro}`);
+                    }
+                }
+            };
 
-  // Reset per-beat speech pointers whenever the stage changes
-  useEffect(() => {
-    sentenceIdxRef.current = 0;
-    setActiveIdx(-1);
-  }, [stage]);
+            const nextStep = (targetStep) => {
+                stopVoice();
+                setStep(targetStep);
+            };
 
-  // Voiced stages (intro / transition / final) auto-continue the episode.
-  // Silent stages (step1 / step2 + their outcomes) never speak, and any
-  // lingering audio is cancelled the instant we land on one, so nothing
-  // overlaps.
-  useEffect(() => {
-    if(prevStageRef.current !== null){
-      if(voiceEnabled){
-        speakSentences(currentSentences, 0, () => {
-          if(stage === 'intro'){
-            logAction('⚡ Смена тона (record scratch)');
-            setScratchActive(true);
-            setTimeout(() => {
-              setScratchActive(false);
-              setStage('transition');
-            }, 520);
-          }
-        });
-      } else {
-        cancelSpeech();
-      }
-    }
-    prevStageRef.current = stage;
-    // eslint-disable-next-line
-  }, [stage]);
+            const handleChoice = (timeChange, energyChange, businessChange) => {
+                setTime(prev => Math.max(0, Math.min(100, prev + timeChange)));
+                setEnergy(prev => Math.max(0, Math.min(100, prev + energyChange)));
+                setBusiness(prev => Math.max(0, Math.min(100, prev + businessChange)));
+                setStep(prev => prev + 1);
+            };
 
-  // Elapsed timer, ticks only while actively speaking
-  useEffect(() => {
-    if(!isSpeaking) return;
-    const id = setInterval(() => {
-      setElapsed((e) => Math.min(TOTAL_SECONDS, e + 0.2));
-    }, 200);
-    return () => clearInterval(id);
-  }, [isSpeaking]);
+            const handleRestart = () => {
+                stopVoice();
+                setTime(100);
+                setBusiness(15);
+                setEnergy(80);
+                setStep(1);
+            };
 
-  const handleTogglePlay = () => {
-    if(!voiceEnabled) return;
-    if(isSpeaking){
-      cancelSpeech();
-      logAction('⏸ Пауза воспроизведения');
-      return;
-    }
-    if(stage === 'intro' && prevStageRef.current === null){
-      prevStageRef.current = stage; // mark that manual playback has begun
-      logAction('▶ Запуск подкаста: ' + EPISODE_LABEL);
-      speakSentences(currentSentences, 0, () => {
-        logAction('⚡ Смена тона (record scratch)');
-        setScratchActive(true);
-        setTimeout(() => {
-          setScratchActive(false);
-          setStage('transition');
-        }, 520);
-      });
-      return;
-    }
-    logAction('▶ Продолжение воспроизведения');
-    speakSentences(currentSentences, sentenceIdxRef.current, () => {
-      if(stage === 'intro'){
-        logAction('⚡ Смена тона (record scratch)');
-        setScratchActive(true);
-        setTimeout(() => { setScratchActive(false); setStage('transition'); }, 520);
-      }
-    });
-  };
+            const handleCTA = () => {
+                setTargetClicks(prev => prev + 1);
+                setShowModal(true);
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    const ctaUtterance = new SpeechSynthesisUtterance("Спасибо! Ваш кейс принят. Будем ломать шаблоны вместе.");
+                    ctaUtterance.lang = "ru-RU";
+                    window.speechSynthesis.speak(ctaUtterance);
+                }
+            };
 
-  const handleToggleMute = () => {
-    setMuted((m) => {
-      logAction(!m ? '🔇 Звук выключен' : '🔊 Звук включён');
-      return !m;
-    });
-  };
+            return (
+                <div class="min-h-[100dvh] w-full max-w-md mx-auto bg-[#0B0F19] p-4 flex flex-col justify-between text-white select-none">
+                    
+                    {/* ХЕДЕР */}
+                    <header class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                            <span class="font-bold tracking-wider text-sm text-red-400 uppercase">Красная Таблетка</span>
+                        </div>
+                        <span class="text-xs bg-slate-800 border border-slate-700 px-2 py-1 rounded text-zinc-300 font-mono">
+                            Эпизод 13
+                        </span>
+                    </header>
 
-  const handleChoice = (letter, choice) => {
-    cancelSpeech();
-    logAction('✓ Выбор (' + currentBeat.kicker + '): вариант ' + (CHOICE_LETTERS[letter] || letter.toUpperCase()));
-    setStage(choice.next);
-  };
+                    {/* ПАНЕЛЬ ПЛЕЕРА И СТАТИСТИКИ */}
+                    <div class="my-4 bg-[#161F30] border border-[#24334C] p-4 rounded-xl shadow-lg">
+                        
+                        {/* Визуализатор звука */}
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs text-zinc-400 font-medium">Режим: {step === 0 || step === 3 ? "🎧 Аудиоподкаст" : "🎯 Интерактивный квест"}</span>
+                            
+                            <div class="flex items-end gap-1 h-8 px-2">
+                                {isPlaying ? (
+                                    [1, 2, 3, 4, 5].map((i) => (
+                                        <div key={i} class="w-[3px] bg-violet-500 rounded-full wave-bar"></div>
+                                    ))
+                                ) : (
+                                    <div class="text-xs text-zinc-500 italic">Без звука</div>
+                                )}
+                            </div>
+                        </div>
 
-  const handleNext = () => {
-    cancelSpeech();
-    logAction(stage === 'transition' ? '→ Переход к интерактивному кейсу' : '→ Переход далее');
-    setStage(currentBeat.next);
-  };
+                        {/* Кнопка воспроизведения */}
+                        {(step === 0 || step === 3) && (
+                            <div class="flex items-center justify-center gap-4 mb-6">
+                                <button 
+                                    onClick={handlePlayPause}
+                                    class="w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                                >
+                                    {isPlaying ? (
+                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                        </svg>
+                                    ) : (
+                                        <svg class="w-6 h-6 text-white translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    )}
+                                </button>
+                                <div class="text-left">
+                                    <p class="font-bold text-sm text-white">{step === 0 ? "Вступление: Минпромторг" : "Итоги симуляции"}</p>
+                                    <p class="text-xs text-zinc-400">{isPlaying ? "Звучит честный эфир..." : "Нажмите для воспроизведения"}</p>
+                                </div>
+                            </div>
+                        )}
 
-  const handleCtaOpen = () => {
-    logAction('📝 Открыта форма «Свой кейс»');
-    setModalOpen(true);
-  };
+                        {/* Шкалы ресурсов */}
+                        <div class="space-y-3 pt-2 border-t border-slate-800">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-amber-400 font-medium flex items-center gap-1">⏱️ Бюджет времени Нео</span>
+                                    <span class="font-mono font-bold text-white">{time}%</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-amber-500 h-full transition-all duration-500" style={{width: `${time}%`}}></div>
+                                </div>
+                            </div>
 
-  const handleCaseSubmit = (text) => {
-    setCaseSubmitted(true);
-    setTargetActionsCount((n) => n + 1);
-    logAction('📮 Кейс отправлен на разбор (учтено в целевых действиях)');
-  };
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-emerald-400 font-medium flex items-center gap-1">📈 Ресурс бизнеса</span>
+                                    <span class="font-mono font-bold text-white">{business}%</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-emerald-500 h-full transition-all duration-500" style={{width: `${business}%`}}></div>
+                                </div>
+                            </div>
 
-  // "Пройти заново" — instantly stop any voice, reset the run's stats, and
-  // drop straight into Step 1, skipping the Step 0 audio intro so the
-  // listener can play through again right away.
-  const handleReset = () => {
-    cancelSpeech();
-    appliedDeltaRef.current.clear();
-    setStats({ time: 100, business: 15, energy: 80 });
-    setVerdict(null);
-    setElapsed(0);
-    logAction('🔁 Прототип запущен заново (сброс к Шагу 1)');
-    setStage('step1');
-  };
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-cyan-400 font-medium flex items-center gap-1">⚡ Жизненная энергия</span>
+                                    <span class="font-mono font-bold text-white">{energy}%</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-cyan-500 h-full transition-all duration-500" style={{width: `${energy}%`}}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setCaseSubmitted(false);
-  };
+                    {/* ПРЕДУПРЕЖДЕНИЕ ОБ ОТСУТСТВИИ СИНТЕЗА РЕЧИ */}
+                    {showTtsAlert && (
+                        <div class="bg-amber-950/90 border border-amber-800 p-3 rounded-lg text-xs text-amber-200 mb-3 flex items-center gap-2">
+                            <span>⚠️</span>
+                            <p><strong>Режим чтения:</strong> Аудио-движок заблокирован вашим устройством или браузером (например, из-за ограничений Gbox/Huawei). Вы можете полноценно пройти тест, читая тексты на экране.</p>
+                        </div>
+                    )}
 
-  const won = verdict ? verdict.indexOf('Победа') === 0 : null;
-  const emphasizeIndex = (isFinal && verdict) ? currentSentences.length - 1 : -1;
-  const emphasizeStyle = (isFinal && verdict) ? {
-    bg: won ? 'rgba(16,185,129,.22)' : 'rgba(255,52,89,.22)',
-    border: won ? 'rgba(16,185,129,.5)' : 'rgba(255,52,89,.45)',
-    color: won ? '#6ee7b7' : '#ffb4c2',
-  } : null;
+                    {/* ЦЕНТРАЛЬНАЯ СЮЖЕТНАЯ ЗОНА */}
+                    <main class="flex-grow flex flex-col justify-center my-2">
+                        <div class="bg-[#161F30] border border-[#24334C] p-5 rounded-xl shadow-lg text-left">
+                            
+                            {/* ШАГ 0: ПРЕСС-РЕЛИЗ */}
+                            {step === 0 && (
+                                <div class="space-y-4">
+                                    <h2 class="text-sm font-bold text-violet-400 uppercase tracking-wider">Официальная сводка:</h2>
+                                    <p class="text-sm text-zinc-100 leading-relaxed max-h-48 overflow-y-auto pr-1">
+                                        {introText}
+                                    </p>
+                                    <div class="border-t border-slate-800 pt-3">
+                                        <p class="text-sm text-amber-200 italic font-medium leading-relaxed">
+                                            {transitionText}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => nextStep(1)}
+                                        class="w-full py-3 bg-white text-slate-950 font-bold rounded-lg text-center shadow-md active:scale-95 transition-all text-sm uppercase tracking-wider"
+                                    >
+                                        Перейти к кейсу
+                                    </button>
+                                </div>
+                            )}
 
-  const deltaChips = useMemo(() => {
-    if(!currentBeat.delta) return null;
-    const d = currentBeat.delta;
-    return [
-      { label:'Время', value:d.time, icon:IconClock, color:'var(--violet)', soft:'var(--violet-soft)' },
-      { label:'Энергия', value:d.energy, icon:IconZap, color:'var(--amber)', soft:'var(--amber-soft)' },
-      { label:'Бизнес', value:d.business, icon:IconBriefcase, color:'var(--emerald)', soft:'var(--emerald-soft)' },
-    ];
-  }, [currentBeat]);
+                            {/* ШАГ 1: ЛОГИСТИКА */}
+                            {step === 1 && (
+                                <div class="space-y-4">
+                                    <div class="bg-slate-950 px-3 py-1 rounded text-[10px] text-zinc-400 font-mono uppercase inline-block">Шаг 1: Логистика</div>
+                                    <p class="text-base text-white font-medium leading-relaxed">
+                                        Нео запустил бренд бытовой химии во Владивостоке. Продукт отличный, но везти его в федеральные сети на запада страны безумно дорого. Московские конкуренты давят ценой. Время поджимает. Что делаешь?
+                                    </p>
+                                    <div class="space-y-3 pt-2">
+                                        <button 
+                                            onClick={() => handleChoice(-40, -50, 5)}
+                                            class="w-full text-left p-3.5 rounded-lg border border-[#24334C] hover:border-violet-500 bg-slate-950 text-sm text-zinc-100 font-medium active:bg-slate-900 transition-colors"
+                                        >
+                                            Подать официальный пакет документов на получение государственной субсидии на логистику.
+                                        </button>
+                                        <button 
+                                            onClick={() => handleChoice(-5, -10, 45)}
+                                            class="w-full text-left p-3.5 rounded-lg border border-[#24334C] hover:border-violet-500 bg-slate-950 text-sm text-zinc-100 font-medium active:bg-slate-900 transition-colors"
+                                        >
+                                            Разместить запрос о поиске попутных грузов или совместной аренде контейнеров в чате выпускников конкурса.
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-  let dashboardCaption = null;
-  if(!supportsSpeech){
-    dashboardCaption = 'Синтез речи не поддерживается — читайте транскрипт';
-  } else if(!voiceEnabled){
-    dashboardCaption = 'Текстовый режим — этот шаг проходит без озвучки';
-  }
+                            {/* ШАГ 2: ХАБ */}
+                            {step === 2 && (
+                                <div class="space-y-4">
+                                    <div class="bg-slate-950 px-3 py-1 rounded text-[10px] text-zinc-400 font-mono uppercase inline-block">Шаг 2: Выделение земли</div>
+                                    <p class="text-base text-white font-medium leading-relaxed">
+                                        Для масштабирования проекта вам необходим собственный логистический хаб. Губернатор на личной встрече концептуально поддержал проект, но реальное выделение участка земли затягивается аппаратом на неопределенный срок. Ваши действия?
+                                    </p>
+                                    <div class="space-y-3 pt-2">
+                                        <button 
+                                            onClick={() => handleChoice(-40, -30, 0)}
+                                            class="w-full text-left p-3.5 rounded-lg border border-[#24334C] hover:border-violet-500 bg-slate-950 text-sm text-zinc-100 font-medium active:bg-slate-900 transition-colors"
+                                        >
+                                            Направить официальный запрос в аппарат правительства региона и ожидать рассмотрения по регламенту.
+                                        </button>
+                                        <button 
+                                            onClick={() => handleChoice(-10, 15, 35)}
+                                            class="w-full text-left p-3.5 rounded-lg border border-[#24334C] hover:border-violet-500 bg-slate-950 text-sm text-zinc-100 font-medium active:bg-slate-900 transition-colors"
+                                        >
+                                            Найти в базе выпускников конкурса сотрудника администрации этого региона и обратиться за рабочей консультацией.
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-  return h('div', { className:'stage' }, [
-    h('div', { className:'ambient', key:'amb' }, [
-      h('div', { className:'blob b1', key:'b1' }),
-      h('div', { className:'blob b2', key:'b2' }),
-      h('div', { className:'blob b3', key:'b3' }),
-    ]),
+                            {/* ШАГ 3: ИТОГИ И МЕТРИКИ */}
+                            {step === 3 && (
+                                <div class="space-y-5">
+                                    <div class="text-center">
+                                        {business >= 75 ? (
+                                            <div class="inline-block px-4 py-2 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">
+                                                🎉 Успех проекта
+                                            </div>
+                                        ) : (
+                                            <div class="inline-block px-4 py-2 rounded-full bg-red-950 border border-red-500 text-red-400 text-sm font-bold uppercase tracking-wider mb-2">
+                                                💀 Крах проекта
+                                            </div>
+                                        )}
+                                        <p class="text-base font-bold text-white mt-1 leading-relaxed">
+                                            {business >= 75 ? step3SuccessText : step3FailText}
+                                        </p>
+                                    </div>
 
-    h('div', { key:'scratch', className:'scratch-overlay' + (scratchActive ? ' active' : '') },
-      h(IconDisc, { size:120, className:'scratch-disc' })
-    ),
+                                    <div class="bg-slate-950 p-4 rounded-lg border border-slate-800">
+                                        <p class="text-sm text-zinc-100 leading-relaxed">
+                                            {step3Outro}
+                                        </p>
+                                    </div>
 
-    h('div', { className:'frame scratch-shake' + (scratchActive ? ' active' : ''), key:'frame' }, [
+                                    {/* КНОПКИ ДЕЙСТВИЯ */}
+                                    <div class="space-y-3 pt-2">
+                                        <button 
+                                            onClick={handleCTA}
+                                            class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-extrabold rounded-lg shadow-md hover:from-emerald-400 hover:to-teal-500 active:scale-95 transition-all text-sm uppercase tracking-wider text-center"
+                                        >
+                                            Предложить свой сложный кейс
+                                        </button>
+                                        
+                                        <button 
+                                            onClick={handleRestart}
+                                            class="w-full py-3 px-4 bg-slate-800 border border-slate-700 text-white font-bold rounded-lg shadow-sm hover:bg-slate-700 active:scale-95 transition-all text-sm uppercase tracking-wider text-center"
+                                        >
+                                            🔄 Пройти заново
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-      /* Header */
-      h('div', { key:'header', className:'flex items-start justify-between mb-5 pt-2' }, [
-        h('div', { className:'flex items-center gap-3', key:'brand' }, [
-          h('svg', { viewBox:'0 0 40 40', width:38, height:38, className:'pill-mark', key:'logo' }, [
-            h('rect', { x:3, y:14, width:34, height:14, rx:7, fill:'#1c1c22', key:'bg' }),
-            h('path', { d:'M20 14 H30 A7 7 0 0 1 30 28 H20 Z', fill:'var(--pill-red)', key:'r' }),
-            h('path', { d:'M20 14 H10 A7 7 0 0 0 10 28 H20 Z', fill:'#e9e8ee', key:'l' }),
-          ]),
-          h('div', { key:'word' }, [
-            h('h1', { className:'display text-[16.5px] font-800 leading-tight', key:'t' }, 'Красная Таблетка'),
-            h('p', { className:'kicker mt-0.5', key:'s' }, 'Честный подкаст'),
-          ]),
-        ]),
-        h('span', { key:'tag', className:'kicker text-right leading-tight opacity-80', style:{ maxWidth:90 } }, 'ПРОТОТИП · ПОВЕДЕНЧЕСКИЙ ТЕСТ'),
-      ]),
+                        </div>
+                    </main>
 
-      h('div', { key:'badge', className:'mb-5' },
-        h('div', { className:'card inline-flex items-center gap-2 px-3 py-1.5' }, [
-          h('span', { className:'live-dot', key:'d' }),
-          h('span', { className:'text-[12px] font-medium text-[var(--text-dim)]', key:'t' }, EPISODE_LABEL),
-        ])
-      ),
+                    {/* МОДАЛЬНОЕ ОКНО */}
+                    {showModal && (
+                        <div class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
+                            <div class="bg-[#161F30] border border-emerald-500 p-6 rounded-2xl max-w-sm w-full text-center shadow-2xl">
+                                <div class="w-12 h-12 bg-emerald-950 border border-emerald-500 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                    ✓
+                                </div>
+                                <h3 class="text-lg font-bold text-white mb-2">Кейс отправлен в редакцию!</h3>
+                                <p class="text-sm text-zinc-300 leading-relaxed mb-6">
+                                    Ваш кейс принят редакцией Журнала Действия. Мы свяжемся с вами, чтобы превратить вашу проблему в следующее эффективное решение.
+                                </p>
+                                <button 
+                                    onClick={() => setShowModal(false)}
+                                    class="w-full py-2 bg-emerald-500 text-slate-950 font-bold rounded-lg active:scale-95 transition-transform"
+                                >
+                                    Закрыть окно
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
-      /* Audio dashboard */
-      h('div', { key:'dashboard', className:'card p-5 mb-4' }, [
-        h('div', { className:'flex items-center gap-3 mb-4', key:'row' }, [
-          h('button', {
-            className:'play-btn', onClick: handleTogglePlay, 'data-playing': isSpeaking,
-            disabled: !voiceEnabled,
-            'aria-label': isSpeaking ? 'Пауза' : 'Воспроизвести',
-          }, isSpeaking ? h(IconPause, { size:28 }) : h(IconPlay, { size:28 })),
-          h('button', {
-            className:'mute-btn', onClick: handleToggleMute, 'data-muted': muted,
-            'aria-label': muted ? 'Включить звук' : 'Выключить звук',
-          }, muted ? h(IconVolumeOff, { size:18 }) : h(IconVolume2, { size:18 })),
-          h('div', { className:'flex-1 min-w-0', key:'wave' }, [
-            h(Waveform, { playing: isSpeaking, muted, key:'w' }),
-            dashboardCaption && h('div', { className:'mt-1', key:'cap' },
-              h('span', { className:'text-[11px] text-[var(--text-faint)]' }, dashboardCaption)
-            ),
-          ]),
-        ]),
-        h('div', { className:'track-bar', key:'track' }, [
-          h('div', { className:'track-fill', style:{ width: (elapsed/TOTAL_SECONDS*100) + '%' }, key:'fill' }),
-          h('div', { className:'track-scrub', style:{ left: (elapsed/TOTAL_SECONDS*100) + '%' }, key:'scrub' }),
-        ]),
-        h('div', { className:'flex justify-between mt-2 mono text-[11.5px] text-[var(--text-faint)]', key:'times' }, [
-          h('span', { key:'e' }, formatTime(elapsed)),
-          h('span', { key:'t' }, formatTime(TOTAL_SECONDS)),
-        ]),
-      ]),
+                    {/* ТЕХНИЧЕСКИЙ ВИДЖЕТ */}
+                    <footer class="mt-4 pt-3 border-t border-slate-800 text-center">
+                        <div class="inline-flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+                            <span class="text-[10px] text-zinc-400 font-mono">
+                                Зарегистрировано кликов на отправку кейсов: <strong class="text-emerald-400 font-bold">{targetClicks}</strong>
+                            </span>
+                        </div>
+                    </footer>
 
-      /* Stats */
-      h('div', { key:'stats', className:'card p-5 mb-4 flex flex-col gap-4' }, [
-        h(ResourceBar, { key:'time', icon:h(IconClock,{size:14}), label:'Бюджет времени', value:stats.time, color:'var(--violet)', colorSoft:'var(--violet-soft)' }),
-        h(ResourceBar, { key:'biz', icon:h(IconBriefcase,{size:14}), label:'Ресурс бизнеса', value:stats.business, color:'var(--emerald)', colorSoft:'var(--emerald-soft)' }),
-        h(ResourceBar, { key:'energy', icon:h(IconZap,{size:14}), label:'Жизненная энергия', value:stats.energy, color:'var(--amber)', colorSoft:'var(--amber-soft)' }),
-      ]),
+                </div>
+            );
+        }
 
-      /* Transcript */
-      h('div', { key:'transcript', className:'mb-4' }, h(Transcript, {
-        kicker: currentBeat.kicker,
-        sentences: currentSentences,
-        activeIdx,
-        silent: !voiceEnabled,
-        emphasizeIndex,
-        emphasizeStyle,
-        deltaChips,
-      })),
-
-      /* Action panel */
-      h('div', { key:'actions', className:'flex flex-col gap-3 mb-6' },
-        currentBeat.choices
-          ? currentBeat.choices.map((c) => h(ChoiceButton, {
-              key:c.id, letter: CHOICE_LETTERS[c.id] || c.id.toUpperCase(), text:c.label,
-              onClick: () => handleChoice(c.id, c),
-            }))
-          : isFinal
-            ? [
-                h('button', { key:'cta', className:'cta-btn', onClick: handleCtaOpen }, [
-                  h(IconSend, { size:16, key:'i' }), CTA_LABEL,
-                ]),
-                h('button', { key:'reset', className:'ghost-btn', onClick: handleReset }, [
-                  h(IconRotate, { size:16, key:'i' }), 'Пройти заново',
-                ]),
-              ]
-            : [h('button', { key:'next', className:'ghost-btn', onClick: handleNext }, [
-                stage === 'transition' ? 'Перейти к кейсу' : 'Далее',
-                h(IconChevronRight, { size:16, key:'i' }),
-              ])]
-      ),
-
-      /* Tracking widget */
-      h('div', { key:'tracking', className:'card p-4' }, [
-        h('div', { className:'flex items-center justify-between mb-2', key:'head' }, [
-          h('span', { className:'kicker', key:'k' }, 'Зарегистрированные действия'),
-          h('span', {
-            className:'mono text-[11px] px-2 py-0.5 rounded-md',
-            style:{ background:'var(--violet-soft)', color:'var(--violet)' }, key:'count',
-          }, log.length),
-        ]),
-        h('div', { className:'max-h-[168px] overflow-y-auto', key:'list' },
-          log.map((entry) => h('div', { key:entry.id, className:'log-row' }, [
-            h('span', { className:'mono text-[11px] text-[var(--text-faint)] flex-shrink-0', key:'t' }, entry.time),
-            h('span', { className:'text-[12px] text-[var(--text-dim)]', key:'l' }, entry.label),
-          ]))
-        ),
-      ]),
-
-      /* Target behavioral metric counter */
-      h('div', { key:'target', className:'card p-5 mt-4 flex items-center justify-between' }, [
-        h('div', { className:'flex items-center gap-3', key:'l' }, [
-          h('div', {
-            className:'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-            style:{ background:'var(--emerald-soft)', color:'var(--emerald)' }, key:'ic'
-          }, h(IconTarget, { size:18 })),
-          h('div', { key:'t' }, [
-            h('p', { className:'kicker', key:'k' }, 'Целевое действие теста'),
-            h('p', { className:'text-[13px] text-[var(--text-dim)]', key:'d' }, 'Кейсов отправлено на разбор'),
-          ]),
-        ]),
-        h('span', { className:'display text-[28px] font-900', style:{ color:'var(--emerald)' }, key:'n' }, targetActionsCount),
-      ]),
-    ]),
-
-    modalOpen && h(CaseModal, {
-      key:'modal', onClose: closeModal, onSubmit: handleCaseSubmit, submitted: caseSubmitted,
-    }),
-  ]);
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(h(App));
-</script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
